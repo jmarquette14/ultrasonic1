@@ -1,0 +1,63 @@
+#include <Arduino_SensorKit.h>
+#include <Arduino_SensorKit_BMP280.h>
+#include <Arduino_SensorKit_LIS3DHTR.h>// Inclure la bibliothèque pour le capteur ultrasonique
+#include <NewPing.h>
+
+// Définir les broches pour le capteur ultrasonique
+#define TRIGGER_PIN  7  // Broche de déclenchement
+#define ECHO_PIN     6  // Broche de réception
+
+// Définir les broches pour la puce de décalage de registre
+#define LATCH_PIN  8  // Broche de verrouillage
+#define CLOCK_PIN  9  // Broche d'horloge
+#define DATA_PIN   10 // Broche de données
+
+// Définir le nombre de LED à contrôler
+#define NUM_LEDS  8
+
+// Définir les seuils de distance pour chaque LED (en cm)
+int distance_seuil[NUM_LEDS] = {10, 20, 30, 40, 50, 60, 70, 80};
+
+// Créer une instance du capteur ultrasonique
+NewPing sonar(TRIGGER_PIN, ECHO_PIN);
+
+void setup() {
+  // Configurer les broches pour la puce de décalage de registre
+  pinMode(LATCH_PIN, OUTPUT);
+  pinMode(CLOCK_PIN, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
+  
+  Oled.begin();
+  Oled.setFlipMode(true); // Sets the rotation of the screen
+
+}
+
+void loop() {
+  int distance_cm_value = analogRead(ECHO_PIN);   //read value from A0
+ 
+  Oled.setFont(u8x8_font_chroma48medium8_r); 
+  Oled.setCursor(0, 33);    // Set the Coordinates 
+  Oled.print("Distance:");   
+  Oled.print('ping_cm'); // Print the Values  
+  Oled.refreshDisplay();    // Update the Display 
+  delay(1000);
+
+  // Mesurer la distance avec le capteur ultrasonique
+  int distance_cm = sonar.ping_cm();
+
+  // Convertir la distance en quantité de LED allumées
+  int leds_allumees = 0;
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (distance_cm <= distance_seuil[i]) {
+      leds_allumees++;
+    }
+  }
+
+  // Envoyer les données à la puce de décalage de registre
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, leds_allumees);
+  digitalWrite(LATCH_PIN, HIGH);
+  digitalWrite(LATCH_PIN, LOW);
+
+  // Attendre un peu avant la prochaine lecture
+  delay(100);
+}
